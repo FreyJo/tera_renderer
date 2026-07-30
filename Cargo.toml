@@ -8,6 +8,10 @@ edition = "2018"
 tera = "1"
 serde_json = "1.0"
 clap = { version = "4.4.11", features = ["derive"] }
+# Pin transitive deps to versions that don't use Cargo edition2024 (requires Cargo >= 1.85).
+# ignore 0.4.22 and globset 0.4.14 are both edition 2018/2021 and work with Cargo 1.75.
+ignore = "=0.4.22"
+globset = "=0.4.14"
 
 [profile.release]
 opt-level = 'z'
