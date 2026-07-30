@@ -53,11 +53,13 @@ fn main() -> io::Result<()> {
         }
     };
 
-    let mut tera = Tera::new();
-    if let Err(e) = tera.load_from_glob(template_glob) {
-        eprintln!("Error: failed to parse templates matching '{}': {}", template_glob, e);
-        process::exit(1);
-    }
+    let tera = match Tera::new(template_glob) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Error: failed to parse templates matching '{}': {}", template_glob, e);
+            process::exit(1);
+        }
+    };
 
     match tera.render(template_file, &ctx) {
         Ok(s) => {
@@ -72,7 +74,7 @@ fn main() -> io::Result<()> {
         }
         Err(e) => {
             let msg = e.to_string();
-            if msg.contains("is not defined") || msg.contains("not found in context") {
+            if msg.contains("not found in context") {
                 eprintln!("Error: template variable not found in context.");
                 eprintln!("  {}", msg);
                 eprintln!(
