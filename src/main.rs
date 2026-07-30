@@ -17,53 +17,75 @@ struct Args {
     out_file: String
 }
 
-fn main()   -> io::Result<()> {
+fn main() -> io::Result<()> {
     // read command line arguments
     let args = Args::parse();
 
     // relative glob to template file
     let template_glob = &args.template_glob;
     // template file path relative to 'template_glob'
-    let template_file = &args.template_file; 
+    let template_file = &args.template_file;
     // relative path json file
     let json_file = &args.json_file;
     // relative path to output file
     let out_file = &args.out_file;
 
-    // open json file
+    // open and read json file
     let mut file = File::open(json_file)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
 
-    // println!("template file: {}", template_file);
-    // println!("json file: {}"    , json_file);
-    // println!("out file: {}"     , out_file);
-    // println!("{}", contents);
-    
     // Parse the string of data into serde_json::Value.
-    let v: serde_json::Value = serde_json::from_str(&contents)?;
-    // Convert serde_json::Value to tera::Context
-    let ctx: Context = Context::from_serialize(&v).unwrap();
-
-    let tera = match Tera::new(template_glob) {
-        Ok(t) => t,
+    let v: serde_json::Value = match serde_json::from_str(&contents) {
+        Ok(v) => v,
         Err(e) => {
-            println!("Parsing error(s): {}", e);
-            ::std::process::exit(1);
-        }
-    };
-
-    match tera.render(template_file, &ctx) {
-        Ok(s) => {
-            let mut f_out = File::create(out_file).expect("Unable to create file");
-            f_out.write_all(s.as_bytes())?;
-        },
-        Err(e) => {
-            println!("Error: {}", e);
+            eprintln!("Error: failed to parse JSON file '{}': {}", json_file, e);
             process::exit(1);
         }
     };
 
-    // println!("-> successfully rendered template!\n");
+    // Convert serde_json::Value to tera::Context
+    let ctx: Context = match Context::from_serialize(&v) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error: failed to build template context from '{}': {}", json_file, e);
+            process::exit(1);
+        }
+    };
+
+    let mut tera = Tera::new();
+    if let Err(e) = tera.load_from_glob(template_glob) {
+        eprintln!("Error: failed to parse templates matching '{}': {}", template_glob, e);
+        process::exit(1);
+    }
+
+    match tera.render(template_file, &ctx) {
+        Ok(s) => {
+            let mut f_out = match File::create(out_file) {
+                Ok(f) => f,
+                Err(e) => {
+                    eprintln!("Error: unable to create output file '{}': {}", out_file, e);
+                    process::exit(1);
+                }
+            };
+            f_out.write_all(s.as_bytes())?;
+        }
+        Err(e) => {
+            let msg = e.to_string();
+            if msg.contains("is not defined") || msg.contains("not found in context") {
+                eprintln!("Error: template variable not found in context.");
+                eprintln!("  {}", msg);
+                eprintln!(
+                    "  Hint: make sure all variables referenced in the template are \
+                     provided in the JSON context file '{}'.",
+                    json_file
+                );
+            } else {
+                eprintln!("Error: failed to render template '{}': {}", template_file, e);
+            }
+            process::exit(1);
+        }
+    };
+
     Ok(())
 }
