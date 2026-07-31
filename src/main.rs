@@ -17,13 +17,23 @@ struct Args {
     out_file: String
 }
 
-fn extract_missing_context_key(render_error: &tera::Error) -> Option<String> {
-    let msg = render_error.to_string();
-    msg.split("Variable `")
+fn extract_key_with_prefix(msg: &str, prefix: &str) -> Option<String> {
+    msg.split(prefix)
         .nth(1)
         .and_then(|s| s.split('`').next())
         .filter(|s| !s.is_empty())
         .map(String::from)
+}
+
+fn extract_missing_context_key(render_error: &tera::Error) -> Option<String> {
+    let detailed_error = format!("{:#}", render_error);
+    extract_key_with_prefix(&detailed_error, "Variable `")
+        .or_else(|| extract_key_with_prefix(&detailed_error, "Field `"))
+        .or_else(|| {
+            let debug_error = format!("{:?}", render_error);
+            extract_key_with_prefix(&debug_error, "Variable `")
+                .or_else(|| extract_key_with_prefix(&debug_error, "Field `"))
+        })
 }
 
 fn main()   -> io::Result<()> {
