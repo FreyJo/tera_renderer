@@ -36,7 +36,7 @@ fn extract_missing_context_key(render_error: &tera::Error) -> Option<String> {
         })
 }
 
-fn main()   -> io::Result<()> {
+fn main() -> io::Result<()> {
     // read command line arguments
     let args = Args::parse();
 
