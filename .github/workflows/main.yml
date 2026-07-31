@@ -30,7 +30,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Build
         run: |
@@ -61,7 +61,7 @@ jobs:
         run: mv target/release/t_renderer${{ steps.ext.outputs.ext }} t_renderer${{ steps.tag.outputs.tag }}-${{ matrix.architecture }}${{ steps.ext.outputs.ext }}
 
       - name: Upload t_renderer Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: t_renderer${{ steps.tag.outputs.tag }}-${{ matrix.architecture }}${{ steps.ext.outputs.ext }}
           path: t_renderer${{ steps.tag.outputs.tag }}-${{ matrix.architecture }}${{ steps.ext.outputs.ext }}
